@@ -21,12 +21,12 @@ if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
 fi
 
 while true; do
-  container_ids=$(docker ps -q -f label=mycron.enabled=true)
+  container_names=$(docker ps --format '{{.Names}}' -f label=mycron.enabled=true)
 
-  for id in $container_ids
+  for name in $container_names
   do
-    echo -e "${YELLOW}Processing container ID: ${id}${NC}"
-    labels=$(docker inspect --format '{{json .Config.Labels}}' $id)
+    echo -e "${YELLOW}Processing container name: ${name}${NC}"
+    labels=$(docker inspect --format '{{json .Config.Labels}}' $name)
 
     mycron_labels=$(echo $labels | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' )
     echo -e "${GREEN}mycron labels:${NC}"
@@ -39,22 +39,28 @@ while true; do
       value=$(echo $label | cut -d= -f2)
       job_id=$(echo $key | cut -d. -f2)
       attribute=$(echo $key | cut -d. -f3)
-      job_data[$job_id.$attribute]=$value
+      unique_key="$name.$job_id.$attribute"
+      job_data[$unique_key]=$value
     done <<< "$mycron_labels"
 
-    for job_id_attribute in "${!job_data[@]}"; do
-      job_id=$(echo $job_id_attribute | cut -d. -f1)
-      if [[ ${job_data[$job_id.schedule]} && ${job_data[$job_id.command]} ]]; then
-        schedule=${job_data[$job_id.schedule]}
-        command=${job_data[$job_id.command]}
+    # Process jobs
+    job_ids=$(printf '%s\n' "${!job_data[@]}" | cut -d. -f2 | sort | uniq)
+    for job_id in $job_ids; do
+      schedule_key="$name.$job_id.schedule"
+      command_key="$name.$job_id.command"
+      if [[ ${job_data[$schedule_key]} && ${job_data[$command_key]} ]]; then
+        schedule=${job_data[$schedule_key]}
+        command=${job_data[$command_key]}
       
         echo -e "${GREEN}Job details:${NC}"
         echo "Job ID: $job_id"
-        echo "Container ID: $id"
+        echo "Container Name: $name"
         echo "Schedule: $schedule"
         echo "Command: $command"
-        echo "Monitoring job $job_id for container $id. It will be executed as per schedule: $schedule"
-      
+        echo "Monitoring job $job_id for container $name."
+        echo "It will be executed as per schedule: $schedule"
+        echo "-------------------------------------------------------------"
+        echo
         # Execute the command according to the schedule
         # Add your logic here
       fi
