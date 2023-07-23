@@ -1,0 +1,15 @@
+---
+version: "3.9"
+services:
+  mycron:
+    hostname: mycron.${DOMAIN}
+    container_name: mycron
+    image: docker.io/sushibox/mycron:latest
+    restart: unless-stopped
+    environment:
+#      - DOCKER_HOST=tcp://dockerproxy:2375
+      - ENV_FILE=${ENVFILE}
+    volumes:
+      - "/etc/timezone:/etc/timezone:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
