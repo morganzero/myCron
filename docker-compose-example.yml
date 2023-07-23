@@ -2,7 +2,6 @@
 version: "3.9"
 services:
   mycron:
-    hostname: mycron.${DOMAIN}
     container_name: mycron
     image: docker.io/sushibox/mycron:latest
     restart: unless-stopped
@@ -10,6 +9,13 @@ services:
 #      - DOCKER_HOST=tcp://dockerproxy:2375
       - ENV_FILE=${ENVFILE}
     volumes:
-      - "/etc/timezone:/etc/timezone:ro"
-      - "/etc/localtime:/etc/localtime:ro"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  hello-world:
+    container_name: hello-world
+    image: hello-world
+    restart: always
+    labels:
+      - "mycron.enabled=true"
+      - "mycron.job-1-hello-world.schedule=*/2 * * * *"
+      - "mycron.job-1-hello-world.command=echo 'Hello World Job 1'"
