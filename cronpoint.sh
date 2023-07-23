@@ -25,11 +25,12 @@ while true; do
 
   for name in $container_names
   do
-    echo -e "${YELLOW}Processing container name: ${name}${NC}"
+    echo -e "${YELLOW}Processing container name: ${GREEN}${name}${NC}"
+    echo
     labels=$(docker inspect --format '{{json .Config.Labels}}' $name)
 
     mycron_labels=$(echo $labels | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' )
-    echo -e "${GREEN}mycron labels:${NC}"
+    echo -e "${GREEN}myCron labels found:${NC}"
     echo "$mycron_labels"
   
     declare -A job_data
@@ -52,13 +53,14 @@ while true; do
         schedule=${job_data[$schedule_key]}
         command=${job_data[$command_key]}
       
-        echo -e "${GREEN}Job details:${NC}"
+        echo -e "Job details:"
+        echo -e "Monitoring job ${GREEN}$job_id${NC} for container ${GREEN}$name${NC}."
+        echo -e "It will be executed as per schedule: ${GREEN}$schedule${NC}"
+        echo
         echo "Job ID: $job_id"
         echo "Container Name: $name"
         echo "Schedule: $schedule"
         echo "Command: $command"
-        echo "Monitoring job $job_id for container $name."
-        echo "It will be executed as per schedule: $schedule"
         echo "-------------------------------------------------------------"
         echo
         # Execute the command according to the schedule
