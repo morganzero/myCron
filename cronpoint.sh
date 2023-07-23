@@ -21,25 +21,20 @@ if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
   source "$ENV_FILE"
 fi
 
-# Get the IDs of the containers with the mycron labels
-container_ids=$(docker ps -q -f label=mycron)
+# Get the names of the containers with the mycron.enabled=true label
+container_names=$(docker ps -a --filter "label=mycron.enabled=true" --format '{{.Names}}')
 
-for id in $container_ids
+# Print out the names of the containers we're going to process
+echo "Processing containers: $container_names"
+
+# Process each container
+for name in $container_names
 do
-  # Debug message
-  echo -e "${YELLOW}Processing container with ID: $id${NC}"
-
   # Get all labels for the container
-  labels=$(docker inspect --format '{{json .Config.Labels}}' $id)
+  labels=$(docker inspect --format '{{json .Config.Labels}}' $name)
 
   # Filter out the labels that are not part of mycron and convert to lines
   mycron_labels=$(echo $labels | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' )
-
-  # If mycron is not enabled for this container, skip it
-  if ! echo "$mycron_labels" | grep -q "mycron.enabled=true"; then
-    echo -e "${YELLOW}mycron.enabled not set to true for container: $id. Skipping...${NC}"
-    continue
-  fi
 
   # Temporary associative array to hold job data
   declare -A job_data
@@ -65,10 +60,10 @@ do
       
       # Echo job details
       echo "Job ID: $job_id"
-      echo "Container ID: $id"
+      echo "Container ID: $name"
       echo "Schedule: $schedule"
       echo "Command: $command"
-      echo "Monitoring job $job_id for container $id, it will be executed as per schedule: $schedule"
+      echo "Monitoring job $job_id for container $name, it will be executed as per schedule: $schedule"
       
       # Execute the command according to the schedule
       # Add your logic here
@@ -76,7 +71,7 @@ do
       # If DS_WEBHOOK is defined, send a POST request to the Discord webhook
       if [ -n "$DS_WEBHOOK" ]; then
         curl -X POST -H 'Content-type: application/json' \
-          --data '{"content":"Cron job for container '${id}' with job id '${job_id}' has been executed."}' \
+          --data '{"content":"Cron job for container '${name}' with job id '${job_id}' has been executed."}' \
           $DS_WEBHOOK
       fi
     fi
