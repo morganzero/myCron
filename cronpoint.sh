@@ -27,12 +27,12 @@ while true; do
   do
     echo -e "${YELLOW}Processing container name: ${NC}${name}"
     labels=$(docker inspect --format '{{json .Config.Labels}}' $name)
-    echo -e "${GREEN}Raw labels from Docker:${NC}"
-    echo "$labels"
-    echo
+    #echo -e "${GREEN}Raw labels from Docker:${NC}"
+    #echo "$labels"
+    #echo
 
-    mycron_labels=$(echo $labels | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' )
-    echo -e "${GREEN}myCron labels found:${NC}"
+    mycron_labels=$(echo "$labels" | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' | sed "s/='\''/'/g")
+    echo -e "${GREEN}myCron labels found for ${name}:${NC}"
     echo "$mycron_labels"
     echo
   
@@ -40,7 +40,7 @@ while true; do
 
     while IFS= read -r label; do
       key=$(echo $label | cut -d= -f1)
-      value=$(echo $label | cut -d= -f2)
+      value=$(echo "$label" | cut -d= -f2-)
       job_id=$(echo $key | cut -d. -f2)
       attribute=$(echo $key | cut -d. -f3)
       unique_key="$name.$job_id.$attribute"
@@ -53,16 +53,16 @@ while true; do
       schedule_key="$name.$job_id.schedule"
       command_key="$name.$job_id.command"
       if [[ ${job_data[$schedule_key]} && ${job_data[$command_key]} ]]; then
-        schedule=${job_data[$schedule_key]}
+        schedule="${job_data[$schedule_key]}"
         command=${job_data[$command_key]}
       
         echo -e "${YELLOW}Job details:${NC}"
         echo -e "Monitoring job ${GREEN}$job_id${NC} for container ${GREEN}$name${NC}."
-        echo -e "It will be executed as per schedule: ${GREEN}$schedule${NC}"
+        #echo -e "It will be executed as per schedule: ${GREEN}"${schedule}"${NC}"
         echo
         echo "Job ID: $job_id"
         echo "Container Name: $name"
-        echo "Schedule: $schedule"
+        #echo "Schedule: "${schedule}""
         echo "Command: $command"
         echo "-------------------------------------------------------------"
         echo
@@ -73,5 +73,5 @@ while true; do
     unset job_data
   done
 
-  sleep 60
+  sleep 60 && clear
 done
