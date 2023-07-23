@@ -1,7 +1,20 @@
 #!/bin/bash
 
-# Start the cron daemon
+# Define color codes
+GREEN='\e[92m'
+YELLOW='\033[1;33m'
+NC='\e[0m' # No Color
+
+echo -e "${YELLOW}Starting myCron...${NC}"
 crond -b -L /dev/stdout
+echo -e "${GREEN}Cron daemon started${NC}"
+
+sleep 1
+echo -e "
+-------------------------------------------------------------
+${GREEN}myCron monitoring schedules${NC}
+-------------------------------------------------------------
+"
 
 # Check if ENV_FILE is set and if yes, source it
 if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
@@ -13,14 +26,18 @@ container_ids=$(docker ps -q -f label=mycron)
 
 for id in $container_ids
 do
+  # Debug message
+  echo -e "${YELLOW}Processing container with ID: $id${NC}"
+
   # Get all labels for the container
   labels=$(docker inspect --format '{{json .Config.Labels}}' $id)
-  
+
   # Filter out the labels that are not part of mycron and convert to lines
   mycron_labels=$(echo $labels | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' )
 
   # If mycron is not enabled for this container, skip it
   if ! echo "$mycron_labels" | grep -q "mycron.enabled=true"; then
+    echo -e "${YELLOW}mycron.enabled not set to true for container: $id. Skipping...${NC}"
     continue
   fi
 
