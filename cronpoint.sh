@@ -19,6 +19,11 @@ do
   # Filter out the labels that are not part of mycron and convert to lines
   mycron_labels=$(echo $labels | jq -r 'to_entries[] | select(.key | startswith("mycron")) | .key + "=" + .value' )
 
+  # If mycron is not enabled for this container, skip it
+  if ! echo "$mycron_labels" | grep -q "mycron.enabled=true"; then
+    continue
+  fi
+
   # Temporary associative array to hold job data
   declare -A job_data
 
